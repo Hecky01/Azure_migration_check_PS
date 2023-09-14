@@ -1,0 +1,855 @@
+Add-Type -assembly System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationCore,PresentationFramework
+[System.Windows.Forms.Application]::EnableVisualStyles()
+
+function remove-contents{
+    param($String)
+    
+    if(Test-Path $String -PathType Container)
+    {
+    Write-Host "remove-contents($String)"
+
+        $pathFile = Get-ChildItem -Path $String -Recurse 
+        $pathFile_count = $pathFile.Count
+        $pathFile | ForEach-Object {$global:size += $_.Length}
+
+        if($pathFile_count -eq "0") 
+        { 
+            Write-Host "There are no files in the folder $String" -ForegroundColor Green
+        }
+        Else 
+        {
+            for ($i = 1; $i -lt $pathFile_count; $i++) { 
+                Write-Progress -Activity "Deleting $i out of $pathFile_count" -Status $pathFile[$i].FullName -PercentComplete (($i / $pathFile_count)*100)
+                Remove-Item -Path $pathFile[$i].FullName -Confirm:$false -Force -Recurse -WarningAction silentlycontinue -ErrorAction silentlycontinue
+                
+            }
+
+            $after = (Get-ChildItem -Path $String -Recurse)
+            $cleared = $pathFile_count - $after.count
+            Write-Host "Cleared $cleared out of $pathFile_count files in the folder $String" -ForegroundColor Green
+            $after | ForEach-Object {$global:size -= $_.Length}
+            
+        }
+
+    }
+    Else
+    {
+        Write-Host "Path $String is not valid"
+    }
+}
+#clolor for main window
+$background_main_color = '#3EB489'
+#color for read only textboxes
+$background_color = "#349974"
+
+
+#general window
+$main_window = New-Object System.Windows.Forms.Form
+$main_window.Text = 'CLEARED Multi Tool'
+$main_window.Width = 600
+$main_window.Height = 700
+$main_window.AutoSize = $true
+$main_window.BackColor = $background_main_color
+$main_window.StartPosition = 'CenterScreen'
+
+#List to choose Username/DisplayName/Email
+
+#show "username"
+#$user_check = New-Object System.Windows.Forms.Label
+#$user_check.Text = 'Username'
+#$user_check.Location = New-Object System.Drawing.Point(0,5)
+#$user_check.AutoSize = $true
+
+$List = New-Object system.Windows.Forms.ComboBox
+$List.text = “”
+$List.width = 80
+$List.autosize = $true
+@('Username','Full Name','E-mail') | ForEach-Object {[void] $List.Items.Add($_)}
+$List.SelectedIndex = 0
+$List.location = New-Object System.Drawing.Point(5,5)
+
+$List_computer = New-Object system.Windows.Forms.ComboBox
+$List_computer.text =""
+$List_computer.width = 80
+$List_computer.autosize = $true
+@('Hostname','IP Adress') | ForEach-Object {[void] $List_computer.Items.Add($_)}
+$List_computer.SelectedIndex = 0
+$List_computer.location = New-Object System.Drawing.Point(5,40)
+#$List_computer.FormattingEnabled = $false
+
+#show "computer"
+$computer_check = New-Object System.Windows.Forms.Label
+$computer_check.Text = 'Computer'
+$computer_check.Location = New-Object System.Drawing.Point(5,40)
+$computer_check.AutoSize = $true
+
+#show "clear temps"
+$clear = New-Object System.Windows.Forms.Label
+$clear.Text = 'Clear temp files'
+$clear.Location = New-Object System.Drawing.Point(5,75)
+$clear.AutoSize = $true
+
+#box to enter username
+$insert_user = New-Object System.Windows.forms.textbox
+$insert_user.Location = New-Object System.Drawing.Point(105,5)
+$insert_user.AutoSize = $true
+$insert_user.Text = ""
+$insert_user.AcceptsReturn = $true
+$insert_user.Multiline = $false
+#$insert_user.ClientSize = system.drawing.size(100,25)
+
+
+#box to enter computername
+$insert_pc = New-Object System.Windows.forms.textbox
+$insert_pc.Location = New-Object System.Drawing.Point(105,40)
+$insert_pc.AutoSize = $true
+$insert_pc.Text = ""
+$insert_pc.AcceptsReturn = $true
+$insert_pc.Multiline = $false
+
+#check button for username
+$Button1 = New-Object System.Windows.Forms.Button
+$Button1.Location = New-Object System.Drawing.Size(235,5)
+$Button1.Size = New-Object System.Drawing.Size(70,23)
+$Button1.Text = "Check"
+$Button1.UseVisualStyleBackColor = $true
+
+#check button for computername
+$Button2 = New-Object System.Windows.Forms.Button
+$Button2.Location = New-Object System.Drawing.Size(235,40)
+$Button2.Size = New-Object System.Drawing.Size(70,23)
+$Button2.Text = "Check"
+$Button2.UseVisualStyleBackColor = $true
+
+#reset Buttons
+$Button_r = New-Object System.Windows.Forms.Button
+$Button_r.Location = New-Object System.Drawing.Size(320,5)
+$Button_r.Size = New-Object System.Drawing.Size(70,23)
+$Button_r.Text = "Reset"
+$Button_r.UseVisualStyleBackColor = $true
+
+$Button_r2 = New-Object System.Windows.Forms.Button
+$Button_r2.Location = New-Object System.Drawing.Size(320,40)
+$Button_r2.Size = New-Object System.Drawing.Size(70,23)
+$Button_r2.Text = "Reset"
+$Button_r2.UseVisualStyleBackColor = $true
+
+# remove temp button
+$Button_temp = New-Object System.Windows.Forms.Button
+$Button_temp.Location = New-Object System.Drawing.Size(105,70)
+$Button_temp.Size = New-Object System.Drawing.Size(70,23)
+$Button_temp.Text = "Clear"
+$Button_temp.UseVisualStyleBackColor = $true
+
+#open phone dashboard button
+$Button_Dashboard = New-Object System.Windows.Forms.Button
+$Button_Dashboard.Location = New-Object System.Drawing.Size(105,185)
+$Button_Dashboard.Size = New-Object System.Drawing.Size(70,23)
+$Button_Dashboard.Text = "Open"
+$Button_Dashboard.UseVisualStyleBackColor = $true
+
+$Label_Dashboard = New-Object System.Windows.Forms.Label
+$Label_Dashboard.Text = "CLEARED"
+$Label_Dashboard.Location  = New-Object System.Drawing.Point(0,187)
+$Label_Dashboard.AutoSize = $true
+
+#open Colo VMware button
+$Button_C_VA = New-Object System.Windows.Forms.Button
+$Button_C_VA.Location = New-Object System.Drawing.Size(105,215)
+$Button_C_VA.Size = New-Object System.Drawing.Size(70,23)
+$Button_C_VA.Text = "Open"
+$Button_C_VA.UseVisualStyleBackColor = $true
+
+$Label_C_VA = New-Object System.Windows.Forms.Label
+$Label_C_VA.Text = "CLEARED"
+$Label_C_VA.Location  = New-Object System.Drawing.Point(0,217)
+$Label_C_VA.AutoSize = $true
+
+#open SD VMware button
+$Button_SD_VA = New-Object System.Windows.Forms.Button
+$Button_SD_VA.Location = New-Object System.Drawing.Size(105,245)
+$Button_SD_VA.Size = New-Object System.Drawing.Size(70,23)
+$Button_SD_VA.Text = "Open"
+$Button_SD_VA.UseVisualStyleBackColor = $true
+
+$Label_SD_VA = New-Object System.Windows.Forms.Label
+$Label_SD_VA.Text = "CLEARED"
+$Label_SD_VA.Location  = New-Object System.Drawing.Point(0,247)
+$Label_SD_VA.AutoSize = $true
+
+#open Studio Park VMware button
+$Button_SP_VA = New-Object System.Windows.Forms.Button
+$Button_SP_VA.Location = New-Object System.Drawing.Size(105,275)
+$Button_SP_VA.Size = New-Object System.Drawing.Size(70,23)
+$Button_SP_VA.Text = "Open"
+$Button_SP_VA.UseVisualStyleBackColor = $true
+
+$Label_SP_VA = New-Object System.Windows.Forms.Label
+$Label_SP_VA.Text = "CLEARED"
+$Label_SP_VA.Location  = New-Object System.Drawing.Point(0,277)
+$Label_SP_VA.AutoSize = $true
+
+#open Colo VSphere button
+$Button_C_VS = New-Object System.Windows.Forms.Button
+$Button_C_VS.Location = New-Object System.Drawing.Size(105,305)
+$Button_C_VS.Size = New-Object System.Drawing.Size(70,23)
+$Button_C_VS.Text = "Open"
+$Button_C_VS.UseVisualStyleBackColor = $true
+
+$Label_C_VS = New-Object System.Windows.Forms.Label
+$Label_C_VS.Text = "CLEARED"
+$Label_C_VS.Location  = New-Object System.Drawing.Point(0,307)
+$Label_C_VS.AutoSize = $true
+
+#open Azure web button
+$Button_Azure = New-Object System.Windows.Forms.Button
+$Button_Azure.Location = New-Object System.Drawing.Size(105,335)
+$Button_Azure.Size = New-Object System.Drawing.Size(70,23)
+$Button_Azure.Text = "Open"
+$Button_Azure.UseVisualStyleBackColor = $true
+
+$Label_Azure = New-Object System.Windows.Forms.Label
+$Label_Azure.Text = "CLEARED"
+$Label_Azure.Location  = New-Object System.Drawing.Point(0,337)
+$Label_Azure.AutoSize = $true
+
+$Button_update_AMFA_report = New-Object System.Windows.Forms.Button
+$Button_update_AMFA_report.Location = New-Object System.Drawing.Size(105,365)
+$Button_update_AMFA_report.Size = New-Object System.Drawing.Size(70,23)
+$Button_update_AMFA_report.Text = "Update"
+$Button_update_AMFA_report.UseVisualStyleBackColor = $true
+
+$Label_AMFA_update = New-Object System.Windows.Forms.Label
+$Label_AMFA_update.Text = "CLEARED update"
+$Label_AMFA_update.Location  = New-Object System.Drawing.Point(0,367)
+$Label_AMFA_update.AutoSize = $true
+
+$Button_ChatbotUI = New-Object System.Windows.Forms.Button
+$Button_ChatbotUI.Location = New-Object System.Drawing.Size(105,395)
+$Button_ChatbotUI.Size = New-Object System.Drawing.Size(70,23)
+$Button_ChatbotUI.Text = "Open"
+$Button_ChatbotUI.UseVisualStyleBackColor = $true
+
+$Label_ChatbotUI = New-Object System.Windows.Forms.Label
+$Label_ChatbotUI.Text = "CLEARED"
+$Label_ChatbotUI.Location  = New-Object System.Drawing.Point(0,397)
+$Label_ChatbotUI.AutoSize = $true
+
+#write "multiple users detected"
+$Label1 = New-Object System.Windows.Forms.TextBox
+$Label1.Text = ""
+$Label1.Location  = New-Object System.Drawing.Point(400,6)
+$Label1.AutoSize = $true
+$label1.Size = New-Object System.Drawing.Size(170,5)
+$Label1.ReadOnly = $true
+$Label1.BackColor = $background_color
+
+#write "links"
+$Label_URLs_Links = New-Object System.Windows.Forms.Label
+$Label_URLs_Links.Text = "Important Links"
+$Label_URLs_Links.Location  = New-Object System.Drawing.Point(30,160)
+$Label_URLs_Links.AutoSize = $true
+
+#user migration status write
+$Label3 = New-Object System.Windows.Forms.TextBox
+$Label3.Text = ""
+$Label3.Location  = New-Object System.Drawing.Point(400,39)
+$Label3.AutoSize = $true
+$label3.Size = New-Object System.Drawing.Size(170,5)
+$Label3.ReadOnly = $true
+$Label3.BackColor = $background_color
+
+#computer migration status write
+$Label4 = New-Object System.Windows.Forms.Label
+$Label4.Text = ""
+$Label4.Location  = New-Object System.Drawing.Point(400,40)
+$Label4.AutoSize = $true
+
+#show space that has been cleared
+$Label5 = New-Object System.Windows.Forms.Label
+$Label5.Text = ''
+$Label5.Location  = New-Object System.Drawing.Point(5,95)
+$Label5.AutoSize = $true
+
+#shows invalid user in temp removal
+$Label6 = New-Object System.Windows.Forms.Label
+$Label6.Text = ''
+$Label6.Location  = New-Object System.Drawing.Point(5,115)
+$Label6.AutoSize = $true
+
+$sign = New-Object System.Windows.Forms.Label
+$sign.Text = "Created by CLEARED from CLEARED"
+$sign.Location  = New-Object System.Drawing.Point(0,700)
+$sign.AutoSize = $true
+
+#read only box shows space deleted by temp clear button
+$textBox6 = New-Object System.Windows.Forms.TextBox
+$textBox6.Location = New-Object System.Drawing.Point(5,100)
+$textBox6.AutoSize = $true
+$textBox6.Size = New-Object System.Drawing.Size(170,5)
+$textBox6.ReadOnly = $true
+$textBox6.BackColor = $background_color
+$textBox6.Text = ""
+
+#textbox for locked/not locked account in CLEARED
+$txt_bx_Lock_ST = New-Object System.Windows.Forms.TextBox
+$txt_bx_Lock_ST.Text = ""
+$txt_bx_Lock_ST.Location  = New-Object System.Drawing.Point(400,185)
+$txt_bx_Lock_ST.AutoSize = $true
+$txt_bx_Lock_ST.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_Lock_ST.ReadOnly = $true
+$txt_bx_Lock_ST.BackColor = $background_color
+
+#shows lock status label
+$Label_Lock_ST = New-Object System.Windows.Forms.Label
+$Label_Lock_ST.Text = 'Lock status:'
+$Label_Lock_ST.Location  = New-Object System.Drawing.Point(290,185)
+$Label_Lock_ST.AutoSize = $true
+
+#textbox for password age in CLEARED
+$txt_bx_pwd_age = New-Object System.Windows.Forms.TextBox
+$txt_bx_pwd_age.Text = ""
+$txt_bx_pwd_age.Location  = New-Object System.Drawing.Point(400,215)
+$txt_bx_pwd_age.AutoSize = $true
+$txt_bx_pwd_age.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_pwd_age.ReadOnly = $true
+$txt_bx_pwd_age.BackColor = $background_color
+
+#shows password age label
+$Label_pwd_age = New-Object System.Windows.Forms.Label
+$Label_pwd_age.Text = 'Password set on:'
+$Label_pwd_age.Location  = New-Object System.Drawing.Point(290,215)
+$Label_pwd_age.AutoSize = $true
+
+#textbox for VM (CLEARED) in CLEARED
+$txt_bx_VM_name = New-Object System.Windows.Forms.TextBox
+$txt_bx_VM_name.Text = ""
+$txt_bx_VM_name.Location  = New-Object System.Drawing.Point(400,245)
+$txt_bx_VM_name.AutoSize = $true
+$txt_bx_VM_name.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_VM_name.ReadOnly = $true
+$txt_bx_VM_name.BackColor = $background_color
+
+#shows VM label
+$Label_VM_name = New-Object System.Windows.Forms.Label
+$Label_VM_name.Text = 'VM name:'
+$Label_VM_name.Location  = New-Object System.Drawing.Point(290,245)
+$Label_VM_name.AutoSize = $true
+
+#textbox for user describtion in CLEARED
+$txt_bx_user_dsc = New-Object System.Windows.Forms.TextBox
+$txt_bx_user_dsc.Text = ""
+$txt_bx_user_dsc.Location  = New-Object System.Drawing.Point(400,275)
+$txt_bx_user_dsc.AutoSize = $true
+$txt_bx_user_dsc.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_user_dsc.ReadOnly = $true
+$txt_bx_user_dsc.BackColor = $background_color
+
+#shows user description label
+$Label_user_dsc = New-Object System.Windows.Forms.Label
+$Label_user_dsc.Text = 'User description:'
+$Label_user_dsc.Location  = New-Object System.Drawing.Point(290,275)
+$Label_user_dsc.AutoSize = $true
+
+#textbox for legacy domain
+$txt_bx_legacy_domain = New-Object System.Windows.Forms.TextBox
+$txt_bx_legacy_domain.Text = ""
+$txt_bx_legacy_domain.Location  = New-Object System.Drawing.Point(400,305)
+$txt_bx_legacy_domain.AutoSize = $true
+$txt_bx_legacy_domain.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_legacy_domain.ReadOnly = $true
+$txt_bx_legacy_domain.BackColor = $background_color
+
+#shows users legacy domain
+$Label_legacy_domain = New-Object System.Windows.Forms.Label
+$Label_legacy_domain.Text = 'Legacy domain:'
+$Label_legacy_domain.Location  = New-Object System.Drawing.Point(290,306)
+$Label_legacy_domain.AutoSize = $true
+
+#textbox for full name (displayname)
+$txt_bx_full_name = New-Object System.Windows.Forms.TextBox
+$txt_bx_full_name.Text = ""
+$txt_bx_full_name.Location  = New-Object System.Drawing.Point(400,335)
+$txt_bx_full_name.AutoSize = $true
+$txt_bx_full_name.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_full_name.ReadOnly = $true
+$txt_bx_full_name.BackColor = $background_color
+
+#shows users legacy domain
+$Label_full_name = New-Object System.Windows.Forms.Label
+$Label_full_name.Text = 'Name:'
+$Label_full_name.Location  = New-Object System.Drawing.Point(290,336)
+$Label_full_name.AutoSize = $true
+
+#textbox for disabled
+$txt_bx_disabled = New-Object System.Windows.Forms.TextBox
+$txt_bx_disabled.Text = ""
+$txt_bx_disabled.Location  = New-Object System.Drawing.Point(400,365)
+$txt_bx_disabled.AutoSize = $true
+$txt_bx_disabled.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_disabled.ReadOnly = $true
+$txt_bx_disabled.BackColor = $background_color
+
+#shows users disabled
+$Label_disabled = New-Object System.Windows.Forms.Label
+$Label_disabled.Text = 'Disabled:'
+$Label_disabled.Location  = New-Object System.Drawing.Point(290,366)
+$Label_disabled.AutoSize = $true
+
+#textbox for pwd expired
+$txt_bx_pwd_expired = New-Object System.Windows.Forms.TextBox
+$txt_bx_pwd_expired.Text = ""
+$txt_bx_pwd_expired.Location  = New-Object System.Drawing.Point(400,395)
+$txt_bx_pwd_expired.AutoSize = $true
+$txt_bx_pwd_expired.Size = New-Object System.Drawing.Size(170,5)
+$txt_bx_pwd_expired.ReadOnly = $true
+$txt_bx_pwd_expired.BackColor = $background_color
+
+#shows pwd expired
+$Label_pwd_expired = New-Object System.Windows.Forms.Label
+$Label_pwd_expired.Text = 'Password expired:'
+$Label_pwd_expired.Location  = New-Object System.Drawing.Point(290,396)
+$Label_pwd_expired.AutoSize = $true
+
+#turned off currently - it did "incorrect computername" error
+$textBox_bad_Hostname = New-Object System.Windows.Forms.TextBox
+$textBox_bad_Hostname.Location = New-Object System.Drawing.Point(5,120)
+$textBox_bad_Hostname.AutoSize = $true
+$textBox_bad_Hostname.Size = New-Object System.Drawing.Size(170,20)
+$textBox_bad_Hostname.ReadOnly = $true
+$textBox_bad_Hostname.BackColor = $background_color
+$textBox_bad_Hostname.Text = ""
+
+#add objects to general window
+#$main_window.Controls.Add($user_check)
+$main_window.controls.Add($List_computer)
+$main_window.controls.Add($clear)
+$main_window.controls.Add($insert_user)
+$main_window.controls.Add($insert_pc)
+$main_window.Controls.Add($Button1)
+$main_window.Controls.Add($Button2)
+$main_window.Controls.Add($Button_r)
+$main_window.Controls.Add($Button_r2)
+$main_window.Controls.Add($Button_temp)
+$main_window.Controls.Add($Button_Azure)
+$main_window.Controls.Add($Button_Dashboard)
+$main_window.Controls.Add($Button_C_VA)
+$main_window.Controls.Add($Button_SD_VA)
+$main_window.Controls.Add($Button_SP_VA)
+$main_window.Controls.Add($Button_C_VS)
+$main_window.Controls.Add($Button_update_AMFA_report)
+$main_window.Controls.Add($Button_ChatbotUI)
+$main_window.Controls.Add($Label_AMFA_update)
+$main_window.Controls.Add($Label_ChatbotUI)
+$main_window.Controls.Add($Label_Dashboard)
+$main_window.Controls.Add($Label_C_VA)
+$main_window.Controls.Add($Label_SD_VA)
+$main_window.Controls.Add($Label_SP_VA)
+$main_window.Controls.Add($Label_Azure)
+$main_window.Controls.Add($Label_C_VS)
+$main_window.Controls.Add($Label1)
+$main_window.Controls.Add($Label_URLs_Links)
+$main_window.Controls.Add($Label3)
+#$main_window.Controls.Add($Label4)
+$main_window.Controls.Add($Label5)
+#$main_window.Controls.Add($Label6)
+$main_window.Controls.Add($Label_Lock_ST)
+$main_window.Controls.Add($Label_pwd_age)
+$main_window.Controls.Add($Label_VM_name)
+$main_window.Controls.Add($Label_user_dsc)
+$main_window.Controls.Add($Label_legacy_domain)
+$main_window.Controls.Add($Label_full_name)
+$main_window.Controls.Add($Label_disabled)
+$main_window.Controls.Add($Label_pwd_expired)
+$main_window.Controls.Add($sign)
+$main_window.Controls.Add($List)
+$main_window.Controls.Add($textBox6)
+$main_window.Controls.Add($txt_bx_Lock_ST)
+$main_window.Controls.Add($txt_bx_pwd_age)
+$main_window.Controls.Add($txt_bx_VM_name)
+$main_window.Controls.Add($txt_bx_user_dsc)
+$main_window.Controls.Add($txt_bx_legacy_domain)
+$main_window.Controls.Add($txt_bx_full_name)
+$main_window.Controls.Add($txt_bx_disabled)
+$main_window.Controls.Add($txt_bx_pwd_expired)
+#$main_window.Controls.Add($textBox_bad_Hostname)
+
+
+#Buttons
+
+$Button1.add_click(
+
+{
+try
+{
+    if($List.Text -match 'Username')
+    {
+$user_migration_status = Get-ADUser -Identity $insert_user.Text -Server CLEARED -Properties CLEARED | Select-Object CLEARED
+$user_details = (Get-ADUser -Identity $insert_user.Text -Server CLEARED -Properties *)
+
+$user_VM_name = $user_details.Fax
+$txt_bx_VM_name.Text = $user_VM_name
+
+$user_lock_status = $user_details.LockedOut
+if ($user_lock_status -like "False") {
+    $txt_bx_Lock_ST.Text = "Not locked"
+}
+else {
+    $txt_bx_Lock_ST.Text = "Locked"
+}
+
+$user_pwd_age = $user_details.passwordLastSet
+$txt_bx_pwd_age.Text = $user_pwd_age
+
+$user_desc = $user_details.description
+$txt_bx_user_dsc.Text = $user_desc
+
+$user_legacy_domain = $user_details.accountnamehistory[0]
+$txt_bx_legacy_domain.Text = $user_legacy_domain
+
+$user_full_name = $user_details.displayname
+$txt_bx_full_name.Text = $user_full_name
+
+$user_disabled = $user_details.enabled
+if ($user_disabled -like "false") {
+    $txt_bx_disabled.Text = "User is disabled"
+}
+else {
+    $txt_bx_disabled.Text = "User is not disabled"
+}
+
+$user_pwd_expired = $user_details.passwordexpired
+if ($user_pwd_expired -like "false") {
+    $txt_bx_pwd_expired.Text = "Not expired"
+}
+else {
+    $txt_bx_pwd_expired.Text = "Expired"
+}
+
+}
+elseif ($List.Text -match 'E-mail') {
+    $user_migration_status = Get-ADUser -filter 'userprincipalname -like $insert_user.Text' -Server CLEARED -Properties CLEARED | Select-Object CLEARED
+    $user_details = (Get-ADUser -filter 'userprincipalname -like $insert_user.Text' -Server CLEARED -Properties *)
+
+    $user_VM_name = $user_details.Fax
+$txt_bx_VM_name.Text = $user_VM_name
+
+$user_lock_status = $user_details.LockedOut
+if ($user_lock_status -like "False") {
+    $txt_bx_Lock_ST.Text = "Not locked"
+}
+else {
+    $txt_bx_Lock_ST.Text = "Locked"
+}
+
+$user_pwd_age = $user_details.passwordLastSet
+$txt_bx_pwd_age.Text = $user_pwd_age
+
+$user_desc = $user_details.description
+$txt_bx_user_dsc.Text = $user_desc
+
+$user_legacy_domain = $user_details.accountnamehistory[0]
+$txt_bx_legacy_domain.Text = $user_legacy_domain
+
+$user_full_name = $user_details.displayname
+$txt_bx_full_name.Text = $user_full_name
+
+$user_disabled = $user_details.enabled
+if ($user_disabled -like "false") {
+    $txt_bx_disabled.Text = "User is disabled"
+}
+else {
+    $txt_bx_disabled.Text = "User is not disabled"
+}
+
+$user_pwd_expired = $user_details.passwordexpired
+if ($user_pwd_expired -like "false") {
+    $txt_bx_pwd_expired.Text = "Not expired"
+}
+else {
+    $txt_bx_pwd_expired.Text = "Expired"
+}
+
+
+}
+elseif ($List.Text -match 'Full name') {
+    $user_migration_status = Get-ADUser -Filter 'displayname -like $insert_user.Text' -Server CLEARED -Properties CLEARED | Select-Object CLEARED
+    $user_details = (Get-ADUser -Filter 'displayname -like $insert_user.Text' -Server CLEARED -Properties *)
+
+    $user_VM_name = $user_details.Fax
+$txt_bx_VM_name.Text = $user_VM_name
+
+$user_lock_status = $user_details.LockedOut
+if ($user_lock_status -like "False") {
+    $txt_bx_Lock_ST.Text = "Not locked"
+}
+else {
+    $txt_bx_Lock_ST.Text = "Locked"
+}
+
+$user_pwd_age = $user_details.passwordLastSet
+$txt_bx_pwd_age.Text = $user_pwd_age
+
+$user_desc = $user_details.description
+$txt_bx_user_dsc.Text = $user_desc
+
+$user_legacy_domain = $user_details.accountnamehistory[0]
+$txt_bx_legacy_domain.Text = $user_legacy_domain
+
+$user_full_name = $user_details.displayname
+$txt_bx_full_name.Text = $user_full_name
+
+$user_disabled = $user_details.enabled
+if ($user_disabled -like "false") {
+    $txt_bx_disabled.Text = "User is disabled"
+}
+else {
+    $txt_bx_disabled.Text = "User is not disabled"
+}
+
+$user_pwd_expired = $user_details.passwordexpired
+if ($user_pwd_expired -like "false") {
+    $txt_bx_pwd_expired.Text = "Not expired"
+}
+else {
+    $txt_bx_pwd_expired.Text = "Expired"
+}
+
+    if ($user_migration_status.Count -gt 1) 
+    {
+        $ButtonType = [System.Windows.MessageBoxButton]::OK
+        $MessageIcon = [System.Windows.MessageBoxImage]::Error
+        $MessageBody = "Multiple Users detected under name. Please use username or e-mail to check migration status."
+        $MessageTitle = "Error"
+        [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+    }
+    else {
+        $Label1.Text = ""
+    }
+
+}
+if ($user_migration_status -match "inactive")
+{
+    $Label1.Text = "User is not migrated CLEARED"
+}
+elseif ($user_migration_status -notmatch "inactive") {
+    $Label1.Text = "User is migrated CLEARED"
+}
+else {
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Error
+$MessageBody = "Invalid Input1"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+catch
+{
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Error
+$MessageBody = "Invalid Input2"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+)
+
+$Button2.add_click(
+{
+try
+{
+if ($List_computer.Text -match "hostname") 
+{
+$computer_migration_status = Get-ADcomputer -Identity $insert_pc.Text -Server CLEARED -properties enabled | Select-Object enabled
+
+    if ($computer_migration_status -match "True") 
+    {
+        $Label3.Text = "Computer is migrated CLEARED"
+    }
+    else {
+    $Label3.Text = "Computer is not migrated CLEARED"
+    }
+}
+elseif ($List_computer.Text -match "IP Adress") 
+{
+    $ButtonType = [System.Windows.MessageBoxButton]::OK
+    $MessageIcon = [System.Windows.MessageBoxImage]::Error
+    $MessageBody = "Please use hostname to check migration status"
+    $MessageTitle = "Error"
+    [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+catch
+{
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Error
+$MessageBody = "Invalid Input"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+)
+
+$Button_r.add_click(
+{
+$Label3.Text = ""
+$insert_user.Text = ""
+$label5.Text = ""
+$label6.Text = ""
+$Label1.Text = ""
+$txt_bx_Lock_ST.Text = ""
+$txt_bx_pwd_age.Text = ""
+$txt_bx_VM_name.Text = ""
+$txt_bx_user_dsc.Text = ""
+$txt_bx_legacy_domain.Text = ""
+$txt_bx_full_name.text = ""
+}
+
+)
+
+$Button_r2.add_click(
+{
+$Label4.Text = ""
+$insert_pc.Text = ""
+$label5.Text = ""
+$label6.Text = ""
+$textBox6.Text = ""
+}
+
+)
+
+$Button_.add_click(
+{
+    if ($list.Text -notmatch "username") {
+        $ButtonType = [System.Windows.MessageBoxButton]::OK
+        $MessageIcon = [System.Windows.MessageBoxImage]::Error
+        $MessageBody = "Please use username to clear data properly"
+        $MessageTitle = "Error"
+        [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+    }
+    else {
+$user = $insert_user.Text
+$pc = $insert_pc.Text
+
+
+$global:size = 0
+ 
+remove-contents $path1
+remove-contents $path2
+remove-contents $path3
+remove-contents $path4
+remove-contents $path5
+
+#Write-Host ""
+$formated = [string]::Format("{0:0.00} MB", $size / 1MB)
+$textBox6.Text = "$formated cleared"
+#problem - IP adress reads also DNS without any error
+
+if ($List_computer.Text -match "hostname") {
+try{ 
+    Get-ADcomputer -Identity $pc -Server CLEARED -properties enabled | Select-Object enabled
+}
+catch
+{
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Warning
+$MessageBody = "Invalid Computername"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+try{
+Get-ADuser -Identity $user -Server CLEARED -properties CLEARED
+}
+catch
+{
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Warning
+$MessageBody = "Invalid Username, users temp folder was not cleared.
+Please enter username and clear again"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+elseif ($formated -gt 0) {}
+else {
+$ButtonType = [System.Windows.MessageBoxButton]::OK
+$MessageIcon = [System.Windows.MessageBoxImage]::Warning
+$MessageBody = "Incorrect Hostname or IP Adress"
+$MessageTitle = "Error"
+[System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+}
+}
+}
+
+)
+
+$ButtonCLEARED.add_click(
+{
+    Start-process "CLEARED"
+}
+)
+
+$ButtonCLEARED.add_click(
+{
+    Start-process "CLEARED"
+}
+)
+
+$ButtonCLEARED.add_click(
+{
+    Start-process "CLEARED"
+}
+)
+
+$ButtonCLEARED.add_click(
+{
+    Start-process "CLEARED"
+}
+)
+
+$ButtonCLEARED.add_click(
+{
+    Start-process "CLEARED"
+}
+)
+
+$Button_Azure.add_click(
+    {
+    $url = "https://portal.azure.com/#home"
+    Start-process chrome.exe "$url -incognito"
+    }
+)
+
+$Button_ChatbotUI.add_click(
+    {
+    $url = "CLEARED"
+    Start-process chrome.exe "$url -incognito"
+    }
+)
+
+$CLEARED(
+    {
+    try {
+        Remove-Item 'CLEARED' -Recurse
+    }
+    catch {
+        
+    }
+    
+    
+    $ButtonType = [System.Windows.MessageBoxButton]::OK
+    $MessageIcon = [System.Windows.MessageBoxImage]::Warning
+    $MessageBody = "CLEARED"
+    $MessageTitle = "Automation data gathering"
+    [System.Windows.MessageBox]::Show($MessageBody,$MessageTitle,$ButtonType,$MessageIcon)
+    
+    
+    start-process -FilePath 'CLEARED' 
+}
+)
+
+
+#show gui
+$main_window.ShowDialog()
